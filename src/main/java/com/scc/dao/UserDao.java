@@ -5,7 +5,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Locale;
+
 import com.scc.model.User;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,9 +24,9 @@ public class UserDao {
             return false;
         }
 
-        String sql = "INSERT INTO Users " +
-                "(name, username, password, role, status) " +
-                "VALUES (?, ?, ?, ?, 'PENDING')";
+        String sql = "INSERT INTO Users "
+                + "(name, username, password, role, status) "
+                + "VALUES (?, ?, ?, ?, 'PENDING')";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -47,11 +49,10 @@ public class UserDao {
         }
     }
 
-
     public boolean loginUser(String username, String password) {
 
-        String sql = "SELECT username, role, status FROM Users " +
-                "WHERE username = ? AND password = ?";
+        String sql = "SELECT username, role, status FROM Users "
+                + "WHERE username = ? AND password = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -88,7 +89,6 @@ public class UserDao {
         }
     }
 
-
     public String getUserRole(String username) {
 
         String sql = "SELECT role FROM Users WHERE username = ?";
@@ -113,14 +113,13 @@ public class UserDao {
         return "";
     }
 
-
     public void viewPendingUsers() {
 
-        String sql = "SELECT user_id, username, role, status " +
-                "FROM Users " +
-                "WHERE status = 'PENDING' " +
-                "AND role != 'ADMIN' " +
-                "ORDER BY user_id";
+        String sql = "SELECT user_id, username, role, status "
+                + "FROM Users "
+                + "WHERE status = 'PENDING' "
+                + "AND role != 'ADMIN' "
+                + "ORDER BY user_id";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql);
@@ -129,6 +128,7 @@ public class UserDao {
             System.out.println("\n========== PENDING ACCOUNTS ==========");
             System.out.printf("%-10s %-20s %-18s %-12s%n",
                     "USER ID", "USERNAME", "ROLE", "STATUS");
+
             System.out.println(
                     "------------------------------------------------------------"
             );
@@ -160,7 +160,6 @@ public class UserDao {
         }
     }
 
-
     public boolean updateUserStatus(int userId, String newStatus) {
 
         String normalizedStatus =
@@ -172,9 +171,9 @@ public class UserDao {
             return false;
         }
 
-        String sql = "UPDATE Users SET status = ? " +
-                "WHERE user_id = ? " +
-                "AND role != 'ADMIN' AND status = 'PENDING'";
+        String sql = "UPDATE Users SET status = ? "
+                + "WHERE user_id = ? "
+                + "AND role != 'ADMIN' AND status = 'PENDING'";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -186,9 +185,9 @@ public class UserDao {
 
             if (rowsUpdated > 0) {
                 System.out.println(
-                        "Account " + userId + " was " +
-                                normalizedStatus.toLowerCase(Locale.ROOT) +
-                                "."
+                        "Account " + userId + " was "
+                                + normalizedStatus.toLowerCase(Locale.ROOT)
+                                + "."
                 );
                 return true;
             }
@@ -206,9 +205,9 @@ public class UserDao {
         }
     }
 
-
     public void viewAllUsers() {
-        String sql = "SELECT user_id, name, username, role, status FROM Users ORDER BY user_id";
+        String sql = "SELECT user_id, name, username, role, status "
+                + "FROM Users ORDER BY user_id";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql);
@@ -217,13 +216,16 @@ public class UserDao {
             System.out.println("\n========== ALL SYSTEM USERS ==========");
             System.out.printf("%-10s %-20s %-20s %-18s %-12s%n",
                     "USER ID", "NAME", "USERNAME", "ROLE", "STATUS");
+
             System.out.println(
                     "--------------------------------------------------------------------------------"
             );
 
             boolean found = false;
+
             while (rs.next()) {
                 found = true;
+
                 System.out.printf("%-10d %-20s %-20s %-18s %-12s%n",
                         rs.getInt("user_id"),
                         rs.getString("name"),
@@ -235,6 +237,7 @@ public class UserDao {
             if (!found) {
                 System.out.println("No users found.");
             }
+
             System.out.println("======================================");
 
         } catch (SQLException e) {
@@ -242,9 +245,10 @@ public class UserDao {
         }
     }
 
-
     public void viewMakeupArtists() {
-        String sql = "SELECT user_id, name, username, status FROM Users WHERE role = 'MAKEUP_ARTIST' ORDER BY user_id";
+        String sql = "SELECT user_id, name, username, status "
+                + "FROM Users WHERE role = 'MAKEUP_ARTIST' "
+                + "ORDER BY user_id";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql);
@@ -253,13 +257,16 @@ public class UserDao {
             System.out.println("\n========== MAKEUP ARTISTS ==========");
             System.out.printf("%-10s %-20s %-20s %-12s%n",
                     "USER ID", "NAME", "USERNAME", "STATUS");
+
             System.out.println(
                     "------------------------------------------------------------"
             );
 
             boolean found = false;
+
             while (rs.next()) {
                 found = true;
+
                 System.out.printf("%-10d %-20s %-20s %-12s%n",
                         rs.getInt("user_id"),
                         rs.getString("name"),
@@ -270,6 +277,7 @@ public class UserDao {
             if (!found) {
                 System.out.println("No makeup artists found.");
             }
+
             System.out.println("======================================");
 
         } catch (SQLException e) {
@@ -277,9 +285,9 @@ public class UserDao {
         }
     }
 
-
     public void viewCustomerInfo(int customerId) {
-        String sql = "SELECT user_id, name, username, status FROM Users WHERE user_id = ? AND role = 'CUSTOMER'";
+        String sql = "SELECT user_id, name, username, status "
+                + "FROM Users WHERE user_id = ? AND role = 'CUSTOMER'";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -304,29 +312,32 @@ public class UserDao {
         }
     }
 
-
     public int getUserIdByUsername(String username) {
         String sql = "SELECT user_id FROM Users WHERE username = ?";
+
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
             pstmt.setString(1, username);
+
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
                     return rs.getInt("user_id");
                 }
             }
+
         } catch (SQLException e) {
             System.out.println("Error getting user ID: " + e.getMessage());
         }
+
         return -1;
     }
-
 
     public List<User> getAllUsers() {
         List<User> users = new ArrayList<>();
 
-        String sql = "SELECT user_id, name, username, password, role, status " +
-                "FROM Users ORDER BY user_id";
+        String sql = "SELECT user_id, name, username, password, role, status "
+                + "FROM Users ORDER BY user_id";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql);
@@ -350,12 +361,11 @@ public class UserDao {
         return users;
     }
 
-
     public List<User> getPendingUsers() {
         List<User> users = new ArrayList<>();
 
-        String sql = "SELECT user_id, name, username, password, role, status " +
-                "FROM Users WHERE status = ? ORDER BY user_id";
+        String sql = "SELECT user_id, name, username, password, role, status "
+                + "FROM Users WHERE status = ? ORDER BY user_id";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -382,10 +392,9 @@ public class UserDao {
         return users;
     }
 
-
     public boolean approveUser(int userId) {
-        String sql = "UPDATE Users SET status = ? " +
-                "WHERE user_id = ? AND status = ?";
+        String sql = "UPDATE Users SET status = ? "
+                + "WHERE user_id = ? AND status = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -412,7 +421,6 @@ public class UserDao {
         }
     }
 
-
     public boolean updateUserRoleAndStatus(
             int userId, String newRole, String newStatus) {
 
@@ -437,8 +445,8 @@ public class UserDao {
             return false;
         }
 
-        String sql = "UPDATE Users SET role = ?, status = ? " +
-                "WHERE user_id = ?";
+        String sql = "UPDATE Users SET role = ?, status = ? "
+                + "WHERE user_id = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -464,4 +472,76 @@ public class UserDao {
             return false;
         }
     }
+
+
+    public boolean deleteUser(int userId, int adminId) {
+        String selectSql = "SELECT name, username, role FROM Users WHERE user_id = ?";
+        String logSql = "INSERT INTO Activity_Logs "
+                + "(user_id, action, timestamp) "
+                + "VALUES (?, ?, CURRENT_TIMESTAMP)";
+        String deleteSql = "DELETE FROM Users WHERE user_id = ? AND role != 'ADMIN'";
+
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            conn.setAutoCommit(false);
+
+            String targetName;
+            String targetUsername;
+            String targetRole;
+
+            try (PreparedStatement selectStmt = conn.prepareStatement(selectSql)) {
+                selectStmt.setInt(1, userId);
+
+                try (ResultSet rs = selectStmt.executeQuery()) {
+                    if (!rs.next()) {
+                        System.out.println("User ID not found.");
+                        conn.rollback();
+                        return false;
+                    }
+
+                    targetName = rs.getString("name");
+                    targetUsername = rs.getString("username");
+                    targetRole = rs.getString("role");
+                }
+            }
+
+            if ("ADMIN".equalsIgnoreCase(targetRole)) {
+                System.out.println(
+                        "Admin accounts cannot be deleted through this feature."
+                );
+                conn.rollback();
+                return false;
+            }
+
+            // Record the deletion using the actual database column: action
+            try (PreparedStatement logStmt = conn.prepareStatement(logSql)) {
+                logStmt.setString(2,
+                        "Admin deleted user account | User ID: " + userId
+                                + " | Name: " + targetName
+                                + " | Username: " + targetUsername
+                                + " | Role: " + targetRole
+                                + " | Admin ID: " + adminId);
+            }
+
+            try (PreparedStatement deleteStmt = conn.prepareStatement(deleteSql)) {
+                deleteStmt.setInt(1, userId);
+
+                int deleted = deleteStmt.executeUpdate();
+
+                if (deleted == 0) {
+                    conn.rollback();
+                    System.out.println("User could not be deleted.");
+                    return false;
+                }
+            }
+
+            conn.commit();
+            System.out.println("User account deleted successfully!");
+            return true;
+
+        } catch (SQLException e) {
+            System.out.println("Error deleting user: " + e.getMessage());
+            return false;
+        }
+    }
+
 }

@@ -1,6 +1,8 @@
+
 package com.scc.ui;
 
 import com.scc.dao.UserDao;
+import com.scc.dao.ActivityLogDao;
 import com.scc.menu.AdminMenu;
 import com.scc.menu.CustomerMenu;
 import com.scc.menu.MakeupArtistMenu;
@@ -11,10 +13,12 @@ public class Authentication {
 
     private final Scanner sc;
     private final UserDao userDao;
+    private final ActivityLogDao activityLogDao;
 
     public Authentication(Scanner sc, UserDao userDao) {
         this.sc = sc;
         this.userDao = userDao;
+        this.activityLogDao = new ActivityLogDao();
     }
 
     public void start() {
@@ -83,14 +87,21 @@ public class Authentication {
         // Retrieve the logged-in user's actual database ID
         int currentUserId = userDao.getUserIdByUsername(username);
 
-        if ("ADMIN".equalsIgnoreCase(role)) {
+        if (currentUserId == -1) {
+            System.out.println(
+                    "Unable to retrieve your account ID."
+            );
+            return;
+        }
 
-            if (currentUserId == -1) {
-                System.out.println(
-                        "Unable to retrieve administrator account ID."
-                );
-                return;
-            }
+        // Record successful login
+        activityLogDao.logActivity(
+                currentUserId,
+                "LOGIN",
+                username + " logged into Glamoura."
+        );
+
+        if ("ADMIN".equalsIgnoreCase(role)) {
 
             AdminMenu adminMenu =
                     new AdminMenu(sc, userDao, currentUserId);
@@ -115,7 +126,15 @@ public class Authentication {
             System.out.println(
                     "Unable to determine your account role."
             );
+            return;
         }
+
+        // Record logout after the user's menu exits
+        activityLogDao.logActivity(
+                currentUserId,
+                "LOGOUT",
+                username + " logged out of Glamoura."
+        );
     }
 
     private void register() {
@@ -164,6 +183,18 @@ public class Authentication {
                 userDao.registerUser(name, username, password, role);
 
         if (success) {
+
+            // Retrieve the newly registered user's ID
+            int registeredUserId =
+                    userDao.getUserIdByUsername(username);
+
+            // Record successful registration
+            activityLogDao.logActivity(
+                    registeredUserId != -1 ? registeredUserId : null,
+                    "USER_REGISTERED",
+                    "New " + role + " account registered: " + username
+            );
+
             System.out.println(
                     "Your account has been registered successfully."
             );
@@ -171,6 +202,7 @@ public class Authentication {
             System.out.println(
                     "Please wait for administrator approval."
             );
+
         } else {
             System.out.println(
                     "Registration failed. Please check your details."

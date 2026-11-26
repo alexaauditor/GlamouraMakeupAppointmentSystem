@@ -211,4 +211,114 @@ public class AppointmentDao {
             System.out.println("Error generating summary report: " + e.getMessage());
         }
     }
+
+
+    // ==========================================
+    // MAKEUP ARTIST PROFILE & STATISTICS
+    // ==========================================
+
+    public void viewArtistProfile(int artistId) {
+        String sql = """
+            SELECT u.user_id, u.name, u.username,
+                   COUNT(a.appointment_id) AS total_appointments,
+                   SUM(CASE WHEN a.status = 'COMPLETED'
+                       THEN 1 ELSE 0 END) AS completed_appointments,
+                   COUNT(DISTINCT CASE WHEN a.status = 'COMPLETED'
+                       THEN a.customer_id END) AS customers_served
+            FROM Users u
+            LEFT JOIN Appointments a ON u.user_id = a.artist_id
+            WHERE u.user_id = ? AND u.role = 'MAKEUP_ARTIST'
+            GROUP BY u.user_id, u.name, u.username
+            """;
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, artistId);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    System.out.println("\n========== MAKEUP ARTIST PROFILE ==========");
+                    System.out.println("Artist ID               : " + rs.getInt("user_id"));
+                    System.out.println("Name                     : " + rs.getString("name"));
+                    System.out.println("Username                 : " + rs.getString("username"));
+                    System.out.println("Role                     : MAKEUP_ARTIST");
+                    System.out.println("-----------------------------------------");
+                    System.out.println("Total Appointments       : " + rs.getInt("total_appointments"));
+                    System.out.println("Completed Appointments   : " + rs.getInt("completed_appointments"));
+                    System.out.println("Unique Customers Served  : " + rs.getInt("customers_served"));
+                    System.out.println("=========================================");
+                } else {
+                    System.out.println("Makeup artist profile not found.");
+                }
+            }
+
+        } catch (SQLException e) {
+            System.out.println("Error viewing artist profile: " + e.getMessage());
+        }
+    }
+
+    // ==========================================
+    // MAKEUP ARTIST CUSTOMER HISTORY
+    // ==========================================
+
+    public void viewArtistCustomerHistory(int artistId) {
+        String sql = """
+            SELECT a.appointment_id,
+                   c.user_id AS customer_id,
+                   c.name AS customer_name,
+                   s.service_name,
+                   a.appointment_date,
+                   a.status
+            FROM Appointments a
+            JOIN Users c ON a.customer_id = c.user_id
+            JOIN Services s ON a.service_id = s.service_id
+            WHERE a.artist_id = ?
+            ORDER BY a.appointment_date DESC, a.appointment_id DESC
+            """;
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, artistId);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                System.out.println("\n========== CUSTOMER / APPOINTMENT HISTORY ==========");
+
+                System.out.printf("%-6s %-10s %-20s %-22s %-15s %-12s%n",
+                        "APPT ID", "CUST ID", "CUSTOMER NAME",
+                        "SERVICE", "DATE", "STATUS");
+
+                System.out.println(
+                        "--------------------------------------------------------------------------------"
+                );
+
+                boolean found = false;
+
+                while (rs.next()) {
+                    found = true;
+
+                    System.out.printf("%-6d %-10d %-20s %-22s %-15s %-12s%n",
+                            rs.getInt("appointment_id"),
+                            rs.getInt("customer_id"),
+                            rs.getString("customer_name"),
+                            rs.getString("service_name"),
+                            rs.getString("appointment_date"),
+                            rs.getString("status"));
+                }
+
+                if (!found) {
+                    System.out.println("No customer appointment history found.");
+                }
+
+                System.out.println(
+                        "==========================================================="
+                );
+            }
+
+        } catch (SQLException e) {
+            System.out.println("Error viewing artist customer history: " + e.getMessage());
+        }
+    }
+
 }

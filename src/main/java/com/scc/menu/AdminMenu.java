@@ -2,7 +2,9 @@
 package com.scc.menu;
 
 import com.scc.dao.UserDao;
+import com.scc.dao.ActivityLogDao;
 import com.scc.model.User;
+import com.scc.model.ActivityLog;
 
 import java.util.List;
 import java.util.Locale;
@@ -13,6 +15,7 @@ public class AdminMenu {
     private final Scanner sc;
     private final UserDao userDao;
     private final int currentAdminId;
+    private final ActivityLogDao activityLogDao = new ActivityLogDao();
 
     public AdminMenu(Scanner sc, UserDao userDao, int currentUserId) {
         this.sc = sc;
@@ -25,14 +28,16 @@ public class AdminMenu {
 
         while (running) {
             System.out.println("\n===================================");
-            System.out.println("       GLAMOURA ADMIN DASHBOARD");
+            System.out.println("     GLAMOURA ADMIN DASHBOARD");
             System.out.println("===================================");
             System.out.println("1. View All System Users");
             System.out.println("2. View Pending Registrations");
             System.out.println("3. Approve an Account");
             System.out.println("4. Reject an Account");
             System.out.println("5. Update User Role and Status");
-            System.out.println("6. Logout");
+            System.out.println("6. Delete User Account");
+            System.out.println("7. Audit Logs");
+            System.out.println("8. Logout");
             System.out.print("Choose an option: ");
 
             String choice = sc.nextLine().trim();
@@ -59,6 +64,14 @@ public class AdminMenu {
                     break;
 
                 case "6":
+                    deleteUserAccount();
+                    break;
+
+                case "7":
+                    auditLogsMenu();
+                    break;
+
+                case "8":
                     running = false;
                     System.out.println("\nAdmin logged out.");
                     break;
@@ -144,6 +157,14 @@ public class AdminMenu {
             boolean success = userDao.approveUser(userId);
 
             if (success) {
+                // ACTIVITY LOG: ACCOUNT APPROVED
+                activityLogDao.logActivity(
+                        currentAdminId,
+                        "ACCOUNT_APPROVED",
+                        "Admin ID " + currentAdminId
+                                + " approved User ID " + userId + "."
+                );
+
                 System.out.println(
                         "Account ID " + userId + " approved successfully!"
                 );
@@ -189,6 +210,14 @@ public class AdminMenu {
             boolean success = userDao.updateUserStatus(userId, "REJECTED");
 
             if (success) {
+                // ACTIVITY LOG: ACCOUNT REJECTED
+                activityLogDao.logActivity(
+                        currentAdminId,
+                        "ACCOUNT_REJECTED",
+                        "Admin ID " + currentAdminId
+                                + " rejected User ID " + userId + "."
+                );
+
                 System.out.println(
                         "Account ID " + userId + " rejected successfully."
                 );
@@ -338,9 +367,195 @@ public class AdminMenu {
         );
 
         if (success) {
+            // ACTIVITY LOG: USER ROLE AND STATUS UPDATED
+            activityLogDao.logActivity(
+                    currentAdminId,
+                    "USER_UPDATED",
+                    "Admin ID " + currentAdminId
+                            + " updated User ID " + userId
+                            + " | New Role: " + newRole
+                            + " | New Status: " + newStatus + "."
+            );
+
             System.out.println("User account updated successfully!");
         } else {
             System.out.println("Unable to update user account.");
         }
+    }
+
+    private void deleteUserAccount() {
+        System.out.println("\n=== DELETE USER ACCOUNT ===");
+
+        List<User> users = userDao.getAllUsers();
+        displayUsers(users, "ALL SYSTEM USERS");
+
+        if (users.isEmpty()) {
+            return;
+        }
+
+        System.out.print("Enter the User ID to delete (0 to cancel): ");
+        String input = sc.nextLine().trim();
+        int userId;
+
+        try {
+            userId = Integer.parseInt(input);
+        } catch (NumberFormatException e) {
+            System.out.println("Invalid ID. Please enter a number.");
+            return;
+        }
+
+        if (userId == 0) {
+            System.out.println("Deletion cancelled.");
+            return;
+        }
+
+        User selectedUser = users.stream()
+                .filter(user -> user.id() == userId)
+                .findFirst()
+                .orElse(null);
+
+        if (selectedUser == null) {
+            System.out.println("User ID not found.");
+            return;
+        }
+
+        if (userId == currentAdminId
+                || "ADMIN".equalsIgnoreCase(selectedUser.role())) {
+            System.out.println(
+                    "Admin accounts cannot be deleted through this feature."
+            );
+            return;
+        }
+
+        System.out.println("\nSelected Account:");
+        System.out.println("User ID: " + selectedUser.id());
+        System.out.println("Name: " + selectedUser.name());
+        System.out.println("Username: " + selectedUser.username());
+        System.out.println("Role: " + selectedUser.role());
+        System.out.println("Status: " + selectedUser.status());
+
+        System.out.print("Are you sure you want to delete this account? (Y/N): ");
+        String confirmation = sc.nextLine().trim();
+
+        if (!confirmation.equalsIgnoreCase("Y")) {
+            System.out.println("Deletion cancelled.");
+            return;
+        }
+
+        boolean success = userDao.deleteUser(userId, currentAdminId);
+
+        if (success) {
+            System.out.println("User ID " + userId + " has been removed.");
+        } else {
+            System.out.println("Unable to delete user account.");
+        }
+    }
+
+    private void auditLogsMenu() {
+        boolean running = true;
+
+        while (running) {
+            System.out.println("\n===================================");
+            System.out.println("       GLAMOURA AUDIT LOGS");
+            System.out.println("===================================");
+            System.out.println("1. View All Audit Logs");
+            System.out.println("2. View Logs by User");
+            System.out.println("3. Back to Admin Dashboard");
+            System.out.print("Choose an option: ");
+
+            String choice = sc.nextLine().trim();
+
+            switch (choice) {
+                case "1":
+                    displayAuditLogs(
+                            activityLogDao.getAllLogs(),
+                            "ALL AUDIT LOGS"
+                    );
+                    break;
+
+                case "2":
+                    viewLogsByUser();
+                    break;
+
+                case "3":
+                    running = false;
+                    break;
+
+                default:
+                    System.out.println("Invalid menu option.");
+            }
+        }
+    }
+
+    private void viewLogsByUser() {
+        System.out.println("\n=== VIEW AUDIT LOGS BY USER ===");
+
+        List<User> users = userDao.getAllUsers();
+        displayUsers(users, "SYSTEM USERS");
+
+        if (users.isEmpty()) {
+            return;
+        }
+
+        System.out.print("Enter User ID to view logs (0 to cancel): ");
+        String input = sc.nextLine().trim();
+
+        try {
+            int userId = Integer.parseInt(input);
+
+            if (userId == 0) {
+                System.out.println("Search cancelled.");
+                return;
+            }
+
+            boolean valid = users.stream()
+                    .anyMatch(user -> user.id() == userId);
+
+            if (!valid) {
+                System.out.println("User ID not found.");
+                return;
+            }
+
+            displayAuditLogs(
+                    activityLogDao.getLogsByUserId(userId),
+                    "AUDIT LOGS FOR USER ID " + userId
+            );
+
+        } catch (NumberFormatException e) {
+            System.out.println("Invalid ID. Please enter a number.");
+        }
+    }
+
+    private void displayAuditLogs(List<ActivityLog> logs, String title) {
+        System.out.println("\n================ " + title + " ================");
+
+        if (logs.isEmpty()) {
+            System.out.println("No audit logs found.");
+            return;
+        }
+
+        System.out.printf(
+                "%-6s %-10s %-26s %-22s %s%n",
+                "LOG ID", "USER ID", "ACTION", "TIMESTAMP", "DESCRIPTION"
+        );
+
+        System.out.println(
+                "---------------------------------------------------------------------------------------------------------------"
+        );
+
+        for (ActivityLog log : logs) {
+            System.out.printf(
+                    "%-6d %-10s %-26s %-22s %s%n",
+                    log.id(),
+                    log.userId() == null ? "SYSTEM" : log.userId(),
+                    shorten(log.actionType(), 25),
+                    shorten(log.timestamp(), 21),
+                    log.description()
+            );
+        }
+
+        System.out.println(
+                "---------------------------------------------------------------------------------------------------------------"
+        );
     }
 }
