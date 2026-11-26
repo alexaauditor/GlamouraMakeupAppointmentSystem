@@ -475,30 +475,21 @@ public class UserDao {
 
 
 
+
     public boolean deleteUser(int userId, int adminId) {
 
         String selectSql = "SELECT name, username, role FROM Users WHERE user_id = ?";
 
-        String deleteSql = "DELETE FROM Users WHERE user_id = ? AND role != 'ADMIN'";
+        String checkAppointmentsSql =
+                "SELECT COUNT(*) FROM Appointments WHERE customer_id = ?";
 
-        String logSql = "INSERT INTO Activity_Logs "
-                + "(user_id, action, timestamp) "
-                + "VALUES (?, ?, CURRENT_TIMESTAMP)";
+        String preserveLogsSql =
+                "UPDATE Activity_Logs "
+                        + "SET action = action || ?, user_id = NULL "
+                        + "WHERE user_id = ?";
 
-        // Verified dependency queries based on your actual database schema
-        String[] dependencyQueries = {
-                "SELECT COUNT(*) FROM Artist_Availability WHERE artist_id = ?",
-                "SELECT COUNT(*) FROM Appointments WHERE customer_id = ?",
-                "SELECT COUNT(*) FROM Appointments WHERE artist_id = ?",
-                "SELECT COUNT(*) FROM Activity_Logs WHERE user_id = ?"
-        };
-
-        String[] dependencyNames = {
-                "Artist Availability",
-                "Customer Appointments",
-                "Artist Appointments",
-                "Activity Logs"
-        };
+        String deleteSql =
+                "DELETE FROM Users WHERE user_id = ? AND role != 'ADMIN'";
 
         try (Connection conn = DatabaseConnection.getConnection()) {
 
@@ -506,7 +497,7 @@ public class UserDao {
 
             try {
 
-                // 1. Check if the target user exists
+                // 1. Retrieve the target account
                 String targetName;
                 String targetUsername;
                 String targetRole;
@@ -530,59 +521,55 @@ public class UserDao {
                     }
                 }
 
-                // 2. Prevent Admin deletion
+                // 2. Prevent Admin account deletion
                 if ("ADMIN".equalsIgnoreCase(targetRole)) {
                     System.out.println(
                             "Admin accounts cannot be deleted through this feature."
                     );
+
                     conn.rollback();
                     return false;
                 }
 
-                // 3. Check foreign-key dependencies
-                boolean hasDependencies = false;
+                // 3. Check customer appointment records
+                try (PreparedStatement checkStmt =
+                             conn.prepareStatement(checkAppointmentsSql)) {
 
-                System.out.println("\n=== CHECKING USER RECORDS ===");
+                    checkStmt.setInt(1, userId);
 
-                for (int i = 0; i < dependencyQueries.length; i++) {
+                    try (ResultSet rs = checkStmt.executeQuery()) {
 
-                    try (PreparedStatement checkStmt =
-                                 conn.prepareStatement(dependencyQueries[i])) {
+                        if (rs.next() && rs.getInt(1) > 0) {
 
-                        checkStmt.setInt(1, userId);
+                            System.out.println(
+                                    "\nDeletion blocked: This user has customer appointments."
+                            );
 
-                        try (ResultSet rs = checkStmt.executeQuery()) {
+                            System.out.println(
+                                    "Preserve the appointment records before deleting this account."
+                            );
 
-                            if (rs.next()) {
-                                int count = rs.getInt(1);
-
-                                if (count > 0) {
-                                    hasDependencies = true;
-
-                                    System.out.println(
-                                            dependencyNames[i] + ": " + count
-                                    );
-                                }
-                            }
+                            conn.rollback();
+                            return false;
                         }
                     }
                 }
 
-                // 4. Stop deletion if related records exist
-                if (hasDependencies) {
-                    System.out.println(
-                            "\nDeletion blocked: This user has related records."
-                    );
+                // 4. Preserve activity logs and detach them from the user
+                String accountInfo = " | Former account: "
+                        + targetName
+                        + " (" + targetUsername + ", User ID: " + userId + ")";
 
-                    System.out.println(
-                            "Resolve the related records first before deleting this account."
-                    );
+                try (PreparedStatement logStmt =
+                             conn.prepareStatement(preserveLogsSql)) {
 
-                    conn.rollback();
-                    return false;
+                    logStmt.setString(1, accountInfo);
+                    logStmt.setInt(2, userId);
+
+                    logStmt.executeUpdate();
                 }
 
-                // 5. Delete the user account
+                // 5. Delete the account
                 try (PreparedStatement deleteStmt =
                              conn.prepareStatement(deleteSql)) {
 
@@ -597,39 +584,43 @@ public class UserDao {
                     }
                 }
 
-                // 6. Record the deletion in Activity Logs
+                // 6. Record the deletion performed by the Admin
+                String logSql = "INSERT INTO Activity_Logs "
+                        + "(user_id, action, timestamp) "
+                        + "VALUES (?, ?, CURRENT_TIMESTAMP)";
+
                 String action = "Admin deleted user account"
-                        + " | User ID: " + userId
+                        + " | Deleted User ID: " + userId
                         + " | Name: " + targetName
                         + " | Username: " + targetUsername
-                        + " | Role: " + targetRole
-                        + " | Admin ID: " + adminId;
+                        + " | Role: " + targetRole;
 
-                try (PreparedStatement logStmt =
+                try (PreparedStatement adminLogStmt =
                              conn.prepareStatement(logSql)) {
 
-                    logStmt.setInt(1, adminId);
-                    logStmt.setString(2, action);
+                    adminLogStmt.setInt(1, adminId);
+                    adminLogStmt.setString(2, action);
 
-                    logStmt.executeUpdate();
+                    adminLogStmt.executeUpdate();
                 }
 
-                // 7. Commit transaction
+                // 7. Commit all changes
                 conn.commit();
 
                 System.out.println("User account deleted successfully!");
                 return true;
 
             } catch (SQLException e) {
+
                 conn.rollback();
                 throw e;
             }
 
         } catch (SQLException e) {
+
             System.out.println("Error deleting user: " + e.getMessage());
             return false;
         }
     }
-
 
 }
