@@ -1,8 +1,10 @@
+
 package com.scc.menu;
 
 import com.scc.dao.AppointmentDao;
 import com.scc.dao.ServiceDao;
 import com.scc.dao.UserDao;
+
 import java.util.Scanner;
 
 public class CustomerMenu {
@@ -53,20 +55,41 @@ public class CustomerMenu {
                     System.out.println("\n=== BOOK AN APPOINTMENT ===");
                     serviceDao.viewServices();
 
-                    System.out.print("\nEnter Service ID to book: ");
+                    // Validate Service ID against the database
                     int serviceId;
-                    try {
-                        serviceId = Integer.parseInt(sc.nextLine().trim());
-                    } catch (NumberFormatException e) {
-                        System.out.println("Invalid Service ID format.");
-                        break;
+
+                    while (true) {
+
+                        System.out.print("\nEnter Service ID to book: ");
+
+                        try {
+                            serviceId = Integer.parseInt(sc.nextLine().trim());
+
+                        } catch (NumberFormatException e) {
+                            System.out.println(
+                                    "Invalid Service ID format. Please enter a number."
+                            );
+                            continue;
+                        }
+
+                        if (serviceDao.serviceExists(serviceId)) {
+                            System.out.println("Service ID verified successfully!");
+                            break;
+                        }
+
+                        System.out.println(
+                                "Invalid Service ID. Please select an existing service."
+                        );
                     }
 
                     userDao.viewMakeupArtists();
+
                     System.out.print("\nEnter Makeup Artist User ID: ");
                     int artistId;
+
                     try {
                         artistId = Integer.parseInt(sc.nextLine().trim());
+
                     } catch (NumberFormatException e) {
                         System.out.println("Invalid Artist ID format.");
                         break;
@@ -76,44 +99,72 @@ public class CustomerMenu {
                     String appointmentDate = sc.nextLine().trim();
 
                     int customerId = userDao.getUserIdByUsername(username);
+
                     if (customerId != -1) {
-                        appointmentDao.bookAppointment(customerId, artistId, serviceId, appointmentDate);
+                        appointmentDao.bookAppointment(
+                                customerId,
+                                artistId,
+                                serviceId,
+                                appointmentDate
+                        );
                     } else {
-                        System.out.println("Error: Could not retrieve customer ID.");
+                        System.out.println(
+                                "Error: Could not retrieve customer ID."
+                        );
                     }
+
                     break;
 
                 case "3":
 
                     int custId = userDao.getUserIdByUsername(username);
+
                     if (custId != -1) {
+
                         appointmentDao.viewCustomerAppointments(custId);
 
-                        System.out.print("\nWould you like to cancel a pending appointment? (y/n): ");
+                        System.out.print(
+                                "\nWould you like to cancel a pending appointment? (y/n): "
+                        );
+
                         String cancelOpt = sc.nextLine().trim();
+
                         if (cancelOpt.equalsIgnoreCase("y")) {
+
                             System.out.print("Enter Appointment ID to cancel: ");
+
                             try {
                                 int apptId = Integer.parseInt(sc.nextLine().trim());
                                 appointmentDao.cancelAppointment(apptId, custId);
+
                             } catch (NumberFormatException e) {
-                                System.out.println("Invalid Appointment ID format.");
+                                System.out.println(
+                                        "Invalid Appointment ID format."
+                                );
                             }
                         }
+
                     } else {
-                        System.out.println("Error: Could not retrieve customer ID.");
+                        System.out.println(
+                                "Error: Could not retrieve customer ID."
+                        );
                     }
+
                     break;
 
                 case "4":
+
                     running = false;
+
                     System.out.println(
                             "\nThank you for choosing Glamoura!"
                     );
+
                     System.out.println("Logging out...");
                     break;
 
                 default:
+
                     System.out.println(
                             "Invalid option. Please choose 1, 2, 3, or 4."
                     );
