@@ -387,14 +387,16 @@ public class AdminMenu {
         System.out.println("\n=== DELETE USER ACCOUNT ===");
 
         List<User> users = userDao.getAllUsers();
+
         displayUsers(users, "ALL SYSTEM USERS");
 
         if (users.isEmpty()) {
             return;
         }
 
-        System.out.print("Enter the User ID to delete (0 to cancel): ");
+        System.out.print("\nEnter User ID to delete (0 to cancel): ");
         String input = sc.nextLine().trim();
+
         int userId;
 
         try {
@@ -419,22 +421,28 @@ public class AdminMenu {
             return;
         }
 
-        if (userId == currentAdminId
-                || "ADMIN".equalsIgnoreCase(selectedUser.role())) {
-            System.out.println(
-                    "Admin accounts cannot be deleted through this feature."
-            );
+        // Prevent deleting your own account
+        if (userId == currentAdminId) {
+            System.out.println("You cannot delete your own admin account.");
             return;
         }
 
-        System.out.println("\nSelected Account:");
+        // Prevent deleting other Admin accounts
+        if ("ADMIN".equalsIgnoreCase(selectedUser.role())) {
+            System.out.println("Admin accounts cannot be deleted.");
+            return;
+        }
+
+        System.out.println("\n=== SELECTED ACCOUNT ===");
         System.out.println("User ID: " + selectedUser.id());
         System.out.println("Name: " + selectedUser.name());
         System.out.println("Username: " + selectedUser.username());
         System.out.println("Role: " + selectedUser.role());
         System.out.println("Status: " + selectedUser.status());
 
-        System.out.print("Are you sure you want to delete this account? (Y/N): ");
+        System.out.println("\nWARNING: This action will permanently delete the account.");
+        System.out.print("Confirm deletion? (Y/N): ");
+
         String confirmation = sc.nextLine().trim();
 
         if (!confirmation.equalsIgnoreCase("Y")) {
@@ -445,9 +453,10 @@ public class AdminMenu {
         boolean success = userDao.deleteUser(userId, currentAdminId);
 
         if (success) {
-            System.out.println("User ID " + userId + " has been removed.");
+            System.out.println("User account deleted successfully!");
         } else {
             System.out.println("Unable to delete user account.");
+            System.out.println("The account may have existing related records.");
         }
     }
 
