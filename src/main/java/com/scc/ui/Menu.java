@@ -1,10 +1,7 @@
-package com.scc.menu;
+package com.scc.ui;
 
 import com.scc.dao.UserDao;
 import java.util.Scanner;
-import com.scc.menu.AdminMenu;
-import com.scc.menu.CustomerMenu;
-import com.scc.menu.MakeupArtistMenu;
 
 public class Menu {
 

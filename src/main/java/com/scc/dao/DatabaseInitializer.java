@@ -4,6 +4,7 @@ package com.scc.dao;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.ResultSet;
 
 public class DatabaseInitializer {
 
@@ -63,7 +64,6 @@ public class DatabaseInitializer {
                 )
                 """,
 
-                // NEW TABLE: MAKEUP ARTIST WEEKLY SCHEDULE
                 """
                 CREATE TABLE IF NOT EXISTS Artist_Availability (
                     availability_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -87,14 +87,37 @@ public class DatabaseInitializer {
                     FOREIGN KEY (user_id) REFERENCES Users(user_id)
                 )
                 """
-
         };
 
         try (Connection conn = DatabaseConnection.getConnection();
              Statement stmt = conn.createStatement()) {
 
+            // Create tables if they do not exist
             for (String sql : createTables) {
                 stmt.execute(sql);
+            }
+
+            // Upgrade existing Services table if needed
+            if (!columnExists(conn, "Services", "duration")) {
+                stmt.execute(
+                        "ALTER TABLE Services ADD COLUMN duration INTEGER DEFAULT 60"
+                );
+                System.out.println("Added missing Services.duration column.");
+            }
+
+            if (!columnExists(conn, "Services", "status")) {
+                stmt.execute(
+                        "ALTER TABLE Services ADD COLUMN status TEXT DEFAULT 'ACTIVE'"
+                );
+                System.out.println("Added missing Services.status column.");
+            }
+
+            // Upgrade existing Appointments table if needed
+            if (!columnExists(conn, "Appointments", "appointment_time")) {
+                stmt.execute(
+                        "ALTER TABLE Appointments ADD COLUMN appointment_time TEXT"
+                );
+                System.out.println("Added missing Appointments.appointment_time column.");
             }
 
             System.out.println("Database initialized successfully.");
@@ -108,5 +131,24 @@ public class DatabaseInitializer {
                     "Unable to initialize the Glamoura database.", e
             );
         }
+    }
+
+    private boolean columnExists(
+            Connection conn, String tableName, String columnName
+    ) throws SQLException {
+
+        String sql = "PRAGMA table_info(" + tableName + ")";
+
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            while (rs.next()) {
+                if (columnName.equalsIgnoreCase(rs.getString("name"))) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 }

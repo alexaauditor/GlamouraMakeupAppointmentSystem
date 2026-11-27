@@ -1,5 +1,5 @@
 
-package com.scc.menu;
+package com.scc.ui;
 
 import com.scc.dao.UserDao;
 import com.scc.dao.ActivityLogDao;

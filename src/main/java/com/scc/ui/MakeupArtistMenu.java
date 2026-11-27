@@ -1,11 +1,12 @@
 
-package com.scc.menu;
+package com.scc.ui;
 
 import com.scc.dao.AppointmentDao;
 import com.scc.dao.ArtistAvailabilityDao;
 import com.scc.dao.ServiceDao;
 import com.scc.dao.UserDao;
 import com.scc.model.ArtistAvailability;
+import com.scc.util.InputValidator;
 
 import java.util.List;
 import java.util.Scanner;
@@ -56,12 +57,15 @@ public class MakeupArtistMenu {
                     if (artistId != -1) {
                         appointmentDao.viewAssignedAppointments(artistId);
 
-                        System.out.print("\nUpdate appointment status? (y/n): ");
-                        String updateOpt = sc.nextLine().trim();
+                        if (readYesNo(
+                                "\nWould you like to update an appointment? (y/n): ")) {
 
-                        if (updateOpt.equalsIgnoreCase("y")) {
-                            System.out.print("Enter Appointment ID: ");
-                            int apptId = Integer.parseInt(sc.nextLine().trim());
+                            int apptId = InputValidator.readInt(
+                                    sc,
+                                    "Enter Appointment ID: ",
+                                    1,
+                                    Integer.MAX_VALUE
+                            );
 
                             System.out.print(
                                     "Enter new status (ACCEPTED/REJECTED): "
@@ -69,20 +73,26 @@ public class MakeupArtistMenu {
                             String status = sc.nextLine().trim();
 
                             appointmentDao.updateAppointmentStatus(
-                                    apptId, status
+                                    apptId, artistId, status
                             );
                         }
 
-                        System.out.print(
-                                "\nView customer information? (y/n): "
-                        );
-                        String custOpt = sc.nextLine().trim();
+                        if (readYesNo(
+                                "\nWould you like to view customer information? (y/n): ")) {
 
-                        if (custOpt.equalsIgnoreCase("y")) {
-                            System.out.print("Enter Customer User ID: ");
-                            int custId = Integer.parseInt(sc.nextLine().trim());
+                            boolean hasCustomers =
+                                    userDao.viewArtistCustomers(artistId);
 
-                            userDao.viewCustomerInfo(custId);
+                            if (hasCustomers) {
+                                int custId = InputValidator.readInt(
+                                        sc,
+                                        "Enter Customer User ID: ",
+                                        1,
+                                        Integer.MAX_VALUE
+                                );
+
+                                userDao.viewArtistCustomerInfo(custId, artistId);
+                            }
                         }
                     }
                     break;
@@ -105,10 +115,26 @@ public class MakeupArtistMenu {
                     break;
 
                 default:
-                    System.out.println(
-                            "Invalid option. Please choose 1-5."
-                    );
+                    System.out.println("Invalid option. Please choose 1-5.");
             }
+        }
+    }
+
+    // Validates Y/N inputs and keeps asking until a valid answer is entered.
+    private boolean readYesNo(String prompt) {
+        while (true) {
+            System.out.print(prompt);
+            String input = sc.nextLine().trim();
+
+            if (input.equalsIgnoreCase("y")) {
+                return true;
+            }
+
+            if (input.equalsIgnoreCase("n")) {
+                return false;
+            }
+
+            System.out.println("Invalid input. Please enter Y or N.");
         }
     }
 
@@ -190,43 +216,28 @@ public class MakeupArtistMenu {
 
         displayDays();
 
-        System.out.print("Select day (1-7): ");
-        String dayInput = sc.nextLine().trim();
-
-        int dayNumber;
-
-        try {
-            dayNumber = Integer.parseInt(dayInput);
-        } catch (NumberFormatException e) {
-            System.out.println("Invalid day selection.");
-            return;
-        }
-
-        if (dayNumber < 1 || dayNumber > 7) {
-            System.out.println("Please select a day from 1 to 7.");
-            return;
-        }
+        int dayNumber = InputValidator.readInt(
+                sc, "Select day (1-7): ", 1, 7
+        );
 
         String selectedDay = DAYS[dayNumber - 1];
 
-        System.out.print("Enter start time (HH:MM, 24-hour format): ");
-        String startTime = sc.nextLine().trim();
+        String startTime = readValidTime(
+                "Enter start time (HH:MM, 24-hour format): "
+        );
 
-        System.out.print("Enter end time (HH:MM, 24-hour format): ");
-        String endTime = sc.nextLine().trim();
+        String endTime = readValidTime(
+                "Enter end time (HH:MM, 24-hour format): "
+        );
 
-        if (!isValidTime(startTime) || !isValidTime(endTime)) {
-            System.out.println(
-                    "Invalid time format. Example: 09:00 or 17:30"
-            );
-            return;
-        }
-
-        if (startTime.compareTo(endTime) >= 0) {
+        while (startTime.compareTo(endTime) >= 0) {
             System.out.println(
                     "End time must be later than start time."
             );
-            return;
+
+            endTime = readValidTime(
+                    "Enter a valid end time (HH:MM): "
+            );
         }
 
         boolean saved = availabilityDao.saveSchedule(
@@ -246,28 +257,14 @@ public class MakeupArtistMenu {
         }
     }
 
-
     private void setDayOff(int artistId) {
         System.out.println("\n========== SET DAY OFF ==========");
 
         displayDays();
 
-        System.out.print("Select day to mark as OFF (1-7): ");
-        String dayInput = sc.nextLine().trim();
-
-        int dayNumber;
-
-        try {
-            dayNumber = Integer.parseInt(dayInput);
-        } catch (NumberFormatException e) {
-            System.out.println("Invalid day selection.");
-            return;
-        }
-
-        if (dayNumber < 1 || dayNumber > 7) {
-            System.out.println("Please select a day from 1 to 7.");
-            return;
-        }
+        int dayNumber = InputValidator.readInt(
+                sc, "Select day to mark as OFF (1-7): ", 1, 7
+        );
 
         String selectedDay = DAYS[dayNumber - 1];
 
@@ -286,7 +283,20 @@ public class MakeupArtistMenu {
         }
     }
 
+    private String readValidTime(String prompt) {
+        while (true) {
+            System.out.print(prompt);
+            String time = sc.nextLine().trim();
 
+            if (isValidTime(time)) {
+                return time;
+            }
+
+            System.out.println(
+                    "Invalid time. Please use HH:MM (example: 09:00 or 17:30)."
+            );
+        }
+    }
 
     private void displayDays() {
         System.out.println("\nAvailable Days:");
@@ -309,7 +319,6 @@ public class MakeupArtistMenu {
         return hour >= 0 && hour <= 23
                 && minute >= 0 && minute <= 59;
     }
-
 
     private void artistProfileMenu() {
         int artistId = userDao.getUserIdByUsername(username);

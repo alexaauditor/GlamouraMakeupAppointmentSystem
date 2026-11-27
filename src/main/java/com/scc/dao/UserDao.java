@@ -623,4 +623,90 @@ public class UserDao {
         }
     }
 
+    public boolean viewArtistCustomers(int artistId) {
+        String sql = """
+        SELECT DISTINCT u.user_id, u.name, u.username, u.status
+        FROM Users u
+        JOIN Appointments a ON u.user_id = a.customer_id
+        WHERE a.artist_id = ? AND u.role = 'CUSTOMER'
+        ORDER BY u.name
+        """;
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, artistId);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                System.out.println("\n========== MY CUSTOMERS ==========");
+                System.out.printf("%-10s %-25s %-20s %-12s%n",
+                        "USER ID", "NAME", "USERNAME", "STATUS");
+
+                System.out.println(
+                        "----------------------------------------------------------------"
+                );
+
+                boolean found = false;
+
+                while (rs.next()) {
+                    found = true;
+
+                    System.out.printf("%-10d %-25s %-20s %-12s%n",
+                            rs.getInt("user_id"),
+                            rs.getString("name"),
+                            rs.getString("username"),
+                            rs.getString("status"));
+                }
+
+                if (!found) {
+                    System.out.println("No customers associated with you yet.");
+                }
+
+                System.out.println("==============================================");
+                return found;
+            }
+
+        } catch (SQLException e) {
+            System.out.println("Error retrieving artist customers: " + e.getMessage());
+            return false;
+        }
+    }
+
+
+    public void viewArtistCustomerInfo(int customerId, int artistId) {
+        String sql = """
+        SELECT DISTINCT u.user_id, u.name, u.username, u.status
+        FROM Users u
+        JOIN Appointments a ON u.user_id = a.customer_id
+        WHERE u.user_id = ?
+          AND a.artist_id = ?
+          AND u.role = 'CUSTOMER'
+        """;
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, customerId);
+            pstmt.setInt(2, artistId);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    System.out.println("\n========== CUSTOMER INFORMATION ==========");
+                    System.out.println("Customer ID : " + rs.getInt("user_id"));
+                    System.out.println("Name        : " + rs.getString("name"));
+                    System.out.println("Username    : " + rs.getString("username"));
+                    System.out.println("Status      : " + rs.getString("status"));
+                    System.out.println("======================================");
+                } else {
+                    System.out.println(
+                            "Customer not found in your appointment records."
+                    );
+                }
+            }
+
+        } catch (SQLException e) {
+            System.out.println("Error retrieving customer information: " + e.getMessage());
+        }
+    }
+
 }

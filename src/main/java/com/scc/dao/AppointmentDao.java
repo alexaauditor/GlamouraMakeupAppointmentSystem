@@ -80,15 +80,40 @@ public class AppointmentDao {
         }
     }
 
-    public boolean updateAppointmentStatus(int appointmentId, String newStatus) {
-        String sql = "UPDATE Appointments SET status = ? WHERE appointment_id = ?";
+    public boolean updateAppointmentStatus(
+            int appointmentId, int artistId, String newStatus) {
+
+        String normalizedStatus = newStatus.trim().toUpperCase();
+
+        if (!normalizedStatus.equals("ACCEPTED")
+                && !normalizedStatus.equals("REJECTED")) {
+
+            System.out.println("Invalid appointment status.");
+            return false;
+        }
+
+        String sql = "UPDATE Appointments SET status = ? "
+                + "WHERE appointment_id = ? AND artist_id = ?";
+
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, newStatus.toUpperCase());
+
+            pstmt.setString(1, normalizedStatus);
             pstmt.setInt(2, appointmentId);
-            pstmt.executeUpdate();
-            System.out.println("Appointment status updated successfully.");
-            return true;
+            pstmt.setInt(3, artistId);
+
+            int rowsUpdated = pstmt.executeUpdate();
+
+            if (rowsUpdated > 0) {
+                System.out.println("Appointment status updated successfully.");
+                return true;
+            }
+
+            System.out.println(
+                    "Update failed. Appointment not found or not assigned to you."
+            );
+            return false;
+
         } catch (SQLException e) {
             System.out.println("Error updating appointment: " + e.getMessage());
             return false;

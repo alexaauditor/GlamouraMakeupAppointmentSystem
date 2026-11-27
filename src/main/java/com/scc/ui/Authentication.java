@@ -3,9 +3,6 @@ package com.scc.ui;
 
 import com.scc.dao.UserDao;
 import com.scc.dao.ActivityLogDao;
-import com.scc.menu.AdminMenu;
-import com.scc.menu.CustomerMenu;
-import com.scc.menu.MakeupArtistMenu;
 
 import java.util.Scanner;
 

@@ -1,9 +1,10 @@
 
-package com.scc.menu;
+package com.scc.ui;
 
 import com.scc.dao.AppointmentDao;
 import com.scc.dao.ServiceDao;
 import com.scc.dao.UserDao;
+import com.scc.util.InputValidator;
 
 import java.util.Scanner;
 
@@ -32,16 +33,16 @@ public class CustomerMenu {
         while (running) {
 
             System.out.println("\n===================================");
-            System.out.println("       GLAMOURA CUSTOMER PORTAL");
+            System.out.println("     GLAMOURA CUSTOMER PORTAL");
             System.out.println("===================================");
             System.out.println("Welcome, " + username + "!");
             System.out.println("1. Browse Makeup Services");
             System.out.println("2. Book an Appointment");
             System.out.println("3. View My Appointments");
             System.out.println("4. Logout");
-            System.out.print("Choose an option: ");
-
-            String choice = sc.nextLine().trim();
+            String choice = Integer.toString(
+                    InputValidator.readInt(sc, "Choose an option: ", 1, 4)
+            );
 
             switch (choice) {
 
@@ -55,7 +56,7 @@ public class CustomerMenu {
                     System.out.println("\n=== BOOK AN APPOINTMENT ===");
                     serviceDao.viewServices();
 
-                    // Validate Service ID against the database
+
                     int serviceId;
 
                     while (true) {
